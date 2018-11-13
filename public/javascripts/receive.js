@@ -22,6 +22,9 @@ ws.onopen = function() {
 ws.onmessage = function (evt) { 
 	var msg = JSON.parse (evt.data);
 
+	if (msg.client == 'receive')
+		return;
+
 	if (msg.type == 'offer')
 		generateAnswer (msg.data);
 
@@ -67,6 +70,7 @@ function gotDescription2(desc) {
 	console.log(`===================copy this answer=========\n${JSON.stringify (desc)}`);
 	
 	ws.send(JSON.stringify ({
+		client : 'receive',
 		type : 'offer',
 		data : desc
 	}));
@@ -92,6 +96,7 @@ function onIceCandidate(pc, event) {
 	console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
 
 	ws.send(JSON.stringify ({
+		client : 'receive',
 		type : 'candidate',
 		data : event.candidate
 	}));

@@ -12,11 +12,13 @@ window.onload = function() {
 	audio2 = document.querySelector('#audio2');
 };
 
-var ws = new WebSocket("ws://nikhil.local:4000");
+var ws = new WebSocket("ws://nikhil.local:3000");
 
 ws.onmessage = function (evt) {
 	var msg = JSON.parse (evt.data);
-	console.log ('=======================', msg)
+
+	if (msg.client == 'transmit')
+		return;
 
 	if (msg.type == 'offer')
 		saveAnswer(msg.data);
@@ -96,8 +98,9 @@ function gotDescription1(desc) {
 	console.log(`===================copy this offer=========\n${JSON.stringify (desc)}`);
 
 	ws.send(JSON.stringify ({
-		type : 'offer',
-		data : desc
+		client : 'transmit',
+		type   : 'offer',
+		data   : desc
 	}));
 
 	pc1.setLocalDescription(desc)
@@ -121,8 +124,8 @@ function onIceCandidate(pc, event) {
 	console.log(`===================copy this candidate=========\n${JSON.stringify (event.candidate)}`);
 	console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
 
-	console.log ('==================', event.candidate)
 	ws.send(JSON.stringify ({
+		client : 'transmit',
 		type : 'candidate',
 		data : event.candidate
 	}));

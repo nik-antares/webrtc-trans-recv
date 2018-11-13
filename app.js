@@ -17,24 +17,30 @@ app.get('/transmit', (req, res) => {
 	res.render ('transmit', {});
 });
 
-var server1 = require('http').createServer(app);
-var server2 = require('http').createServer(app);
+var server = require('http').createServer(app);
 
-server1.listen (3000);
-server2.listen (4000);
+server.listen (3000);
  
-const wss1 = new WebSocket.Server({server : server1});
-const wss2 = new WebSocket.Server({server : server2});
+const wss = new WebSocket.Server({server});
 
-wss2.on('connection', function connection(ws) {
-	ws.on('message', function incoming(message) {
-		console.log ('=====from transmitter===', message)
-		wss1.on('connection', function connection(_ws) {
-			_ws.send (message);
+wss.broadcast = function broadcast(data) {
+  wss.clients.forEach(function each(client) {
+      if (client.readyState === WebSocket.OPEN) {
+	        client.send(data);
+	      }
+    });
+};
+
+wss.on('connection', function connection(ws) {
+	ws.on('message', function incoming(data) {
+		wss.clients.forEach(function each(client) {
+			if (client.readyState === WebSocket.OPEN) {
+				client.send(data);
+			}
 		});
-	});	
+	});
 });
-
+ /* 
 wss1.on('connection', function connection(ws) {
 	ws.on('message', function incoming(message) {
 		console.log ('=====from receiver===', message)
@@ -42,4 +48,4 @@ wss1.on('connection', function connection(ws) {
 			_ws.send (message);
 		});
 	});
-});
+});*/
