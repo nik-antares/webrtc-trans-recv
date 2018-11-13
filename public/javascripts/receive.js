@@ -1,5 +1,4 @@
 let pc1;
-let pc2;
 let audio2;
 let localStream;
 
@@ -21,45 +20,33 @@ function call () {
 	pc1 = new RTCPeerConnection(servers);
 	console.log('Created local peer connection object pc1');
 	pc1.onicecandidate = e => onIceCandidate(pc1, e);
-
-	pc1.createOffer(offerOptions)
-		.then(gotDescription1, onCreateSessionDescriptionError);
 }
 
 window.addCandidates = function (candidate) {
 	onIceCandidate2(candidate);
-	pc2.ontrack = gotRemoteStream;
+	pc1.ontrack = gotRemoteStream;
 }
 
 window.createAnswer = function (offer) {
-	createAnswer (offer);
+	saveOffer (offer);
 }
 
 function onCreateSessionDescriptionError(error) {
 	console.log(`Failed to create session description: ${error.toString()}`);
 }
 
-
-function gotDescription1(desc) {
-	console.log(`Offer from pc1\n${desc.sdp}`);
-	console.log(`===================copy this offer=========\n${JSON.stringify (desc)}`);
-	pc1.setLocalDescription(desc)
-		.then(() => {
-			desc.sdp = forceChosenAudioCodec(desc.sdp);
-		}, onSetSessionDescriptionError);
-}
-
-function createAnswer (desc) {
-	pc2.setRemoteDescription(desc).then(() => {
-		return pc2.createAnswer().then(gotDescription2, onCreateSessionDescriptionError);
+function saveOffer (desc) {
+	pc1.setRemoteDescription(desc).then(() => {
+		desc.sdp = forceChosenAudioCodec(desc.sdp);
+		createAnswer(desc);
 	}, onSetSessionDescriptionError);
 }
 
-function gotDescription2(desc) {
+function createAnswer(desc) {
 	console.log(`Answer from pc2\n${desc.sdp}`);
-	pc2.setLocalDescription(desc).then(() => {
+	console.log(`===================copy this answer=========\n${JSON.stringify (desc)}`);
+	pc1.setLocalDescription(desc).then(() => {
 		desc.sdp = forceChosenAudioCodec(desc.sdp);
-		pc1.setRemoteDescription(desc).then(() => {}, onSetSessionDescriptionError);
 	}, onSetSessionDescriptionError);
 }
 
@@ -70,21 +57,12 @@ function gotRemoteStream(e) {
 	}
 }
 
-function getOtherPc(pc) {
-	return (pc === pc1) ? pc2 : pc1;
-}
-
 function getName(pc) {
 	return (pc === pc1) ? 'pc1' : 'pc2';
 }
 
 function onIceCandidate(pc, event) {
 	console.log(`===================copy this candidate=========\n${JSON.stringify (event.candidate)}`);
-	getOtherPc(pc).addIceCandidate(event.candidate)
-		.then(
-			() => onAddIceCandidateSuccess(pc),
-			err => onAddIceCandidateError(pc, err)
-		);
 	console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
 }
 

@@ -1,5 +1,4 @@
 let pc1;
-let pc2;
 let audio2;
 let localStream;
 
@@ -60,8 +59,8 @@ window.addCandidates = function (candidate) {
 	onIceCandidate2(candidate);
 }
 
-window.createAnswer = function (offer) {
-	createAnswer (offer);
+window.saveAnswer = function (answer) {
+	saveAnswer(answer);
 }
 
 window.addTrack = function () {
@@ -78,22 +77,11 @@ function gotDescription1(desc) {
 		}, onSetSessionDescriptionError);
 }
 
-function createAnswer (desc) {
-	pc2.setRemoteDescription(desc).then(() => {
-		return pc2.createAnswer().then(gotDescription2, onCreateSessionDescriptionError);
-	}, onSetSessionDescriptionError);
-}
-
-function gotDescription2(desc) {
-	console.log(`Answer from pc2\n${desc.sdp}`);
-	pc2.setLocalDescription(desc).then(() => {
+function saveAnswer (desc) {
+	console.log(`===================copy this description=========\n${JSON.stringify (desc)}`);
+	pc1.setRemoteDescription(desc).then(() => {
 		desc.sdp = forceChosenAudioCodec(desc.sdp);
-		pc1.setRemoteDescription(desc).then(() => {}, onSetSessionDescriptionError);
 	}, onSetSessionDescriptionError);
-}
-
-function getOtherPc(pc) {
-	return (pc === pc1) ? pc2 : pc1;
 }
 
 function getName(pc) {
@@ -102,11 +90,6 @@ function getName(pc) {
 
 function onIceCandidate(pc, event) {
 	console.log(`===================copy this candidate=========\n${JSON.stringify (event.candidate)}`);
-	getOtherPc(pc).addIceCandidate(event.candidate)
-		.then(
-			() => onAddIceCandidateSuccess(pc),
-			err => onAddIceCandidateError(pc, err)
-		);
 	console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
 }
 
