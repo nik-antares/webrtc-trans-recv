@@ -1,7 +1,17 @@
+let audio1;
+let audio2;
+
 let pc1;
 let pc2;
-let audio2;
 let localStream;
+
+let bitrateGraph;
+let bitrateSeries;
+
+let packetGraph;
+let packetSeries;
+
+let lastResult;
 
 const offerOptions = {
 	offerToReceiveAudio: 1,
@@ -10,49 +20,78 @@ const offerOptions = {
 };
 
 window.onload = function() {
+	audio1 = document.querySelector('#audio1');
 	audio2 = document.querySelector('#audio2');
 };
 
-function call () {
-	console.log('Starting call');
+function gotStream(stream) {
+	console.log('Received local stream');
+	localStream = stream;
 
-	/* Create my connection */
-	const servers = null;
-	pc1 = new RTCPeerConnection(servers);
-	console.log('Created local peer connection object pc1');
-	pc1.onicecandidate = e => onIceCandidate(pc1, e);
+	//Transmitting local stream
+	audio1.srcObject = localStream;
+
+	const audioTracks = localStream.getAudioTracks();
+	if (audioTracks.length > 0) {
+		console.log(`Using Audio device: ${audioTracks[0].label}`);
+	}
+	localStream.getTracks().forEach(track => pc1.addTrack(track, localStream));
+	console.log('Adding Local Stream to peer connection');
 
 	pc1.createOffer(offerOptions)
 		.then(gotDescription1, onCreateSessionDescriptionError);
-}
 
-window.addCandidates = function (candidate) {
-	onIceCandidate2(candidate);
-	pc2.ontrack = gotRemoteStream;
-}
+	/*bitrateSeries = new TimelineDataSeries();
+	bitrateGraph = new TimelineGraphView('bitrateGraph', 'bitrateCanvas');
+	bitrateGraph.updateEndDate();
 
-window.createAnswer = function (offer) {
-	createAnswer (offer);
+	packetSeries = new TimelineDataSeries();
+	packetGraph = new TimelineGraphView('packetGraph', 'packetCanvas');
+	packetGraph.updateEndDate();*/
 }
 
 function onCreateSessionDescriptionError(error) {
 	console.log(`Failed to create session description: ${error.toString()}`);
 }
 
+function call () {
+	console.log('Starting call');
+
+	/* My servers */
+	const servers = null;
+	pc1 = new RTCPeerConnection(servers);
+	console.log('Created local peer connection object pc1');
+	pc1.onicecandidate = e => onIceCandidate(pc1, e);
+
+	 
+	pc2 = new RTCPeerConnection(servers);
+	console.log('Created remote peer connection object pc2');
+	pc2.onicecandidate = e => onIceCandidate(pc2, e);
+	pc2.ontrack = gotRemoteStream;
+	console.log('Requesting local stream');
+
+	/* Getting local media stream */
+	navigator.mediaDevices
+		.getUserMedia({
+			audio: true,
+			video: false
+		})
+		.then(gotStream)
+		.catch(e => {
+			alert(`getUserMedia() error: ${e.name}`);
+		});
+}
 
 function gotDescription1(desc) {
 	console.log(`Offer from pc1\n${desc.sdp}`);
-	console.log(`===================copy this offer=========\n${JSON.stringify (desc)}`);
 	pc1.setLocalDescription(desc)
 		.then(() => {
 			desc.sdp = forceChosenAudioCodec(desc.sdp);
+			
+			pc2.setRemoteDescription(desc).then(() => {
+				return pc2.createAnswer().then(gotDescription2, onCreateSessionDescriptionError);
+			}, onSetSessionDescriptionError);
 		}, onSetSessionDescriptionError);
-}
-
-function createAnswer (desc) {
-	pc2.setRemoteDescription(desc).then(() => {
-		return pc2.createAnswer().then(gotDescription2, onCreateSessionDescriptionError);
-	}, onSetSessionDescriptionError);
 }
 
 function gotDescription2(desc) {
@@ -61,6 +100,18 @@ function gotDescription2(desc) {
 		desc.sdp = forceChosenAudioCodec(desc.sdp);
 		pc1.setRemoteDescription(desc).then(() => {}, onSetSessionDescriptionError);
 	}, onSetSessionDescriptionError);
+}
+
+function hangup() {
+	console.log('Ending call');
+	localStream.getTracks().forEach(track => track.stop());
+	pc1.close();
+	pc2.close();
+	pc1 = null;
+	pc2 = null;
+	hangupButton.disabled = true;
+	callButton.disabled = false;
+	codecSelector.disabled = false;
 }
 
 function gotRemoteStream(e) {
@@ -79,22 +130,12 @@ function getName(pc) {
 }
 
 function onIceCandidate(pc, event) {
-	console.log(`===================copy this candidate=========\n${JSON.stringify (event.candidate)}`);
 	getOtherPc(pc).addIceCandidate(event.candidate)
 		.then(
 			() => onAddIceCandidateSuccess(pc),
 			err => onAddIceCandidateError(pc, err)
 		);
 	console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
-}
-
-function onIceCandidate2(candidate) {
-	pc1.addIceCandidate(new RTCIceCandidate ({candidate : candidate}))
-		.then(
-			() => onAddIceCandidateSuccess(),
-			err => onAddIceCandidateError(err)
-		);
-	console.log(`pc2 ICE candidate:\n${candidate}`);
 }
 
 function onAddIceCandidateSuccess() {
@@ -192,5 +233,45 @@ function setDefaultCodec(mLine, payload) {
 	}
 	return newLine.join(' ');
 }
+
+// query getStats every second
+/*window.setInterval(() => {
+	if (!pc1) {
+		return;
+	}
+	const sender = pc1.getSenders()[0];
+	sender.getStats().then(res => {
+		res.forEach(report => {
+			let bytes;
+			let packets;
+			if (report.type === 'outbound-rtp') {
+				if (report.isRemote) {
+					return;
+				}
+				const now = report.timestamp;
+				bytes = report.bytesSent;
+				packets = report.packetsSent;
+				if (lastResult && lastResult.has(report.id)) {
+					// calculate bitrate
+					const bitrate = 8 * (bytes - lastResult.get(report.id).bytesSent) /
+						(now - lastResult.get(report.id).timestamp);
+
+					// append to chart
+					bitrateSeries.addPoint(now, bitrate);
+					bitrateGraph.setDataSeries([bitrateSeries]);
+					bitrateGraph.updateEndDate();
+
+					// calculate number of packets and append to chart
+					packetSeries.addPoint(now, packets -
+						lastResult.get(report.id).packetsSent);
+					packetGraph.setDataSeries([packetSeries]);
+					packetGraph.updateEndDate();
+				}
+			}
+		});
+		lastResult = res;
+	});
+}, 1000);
+*/
 
 call ();

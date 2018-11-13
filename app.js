@@ -9,9 +9,11 @@ app.set('view engine', 'jade');
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => res.send ('Hello World!'));
-app.get('/receive', (req, res) => res.send ('Hello World!'));
+app.get('/receive', (req, res) => {
+	res.render ('receive', {});
+});
 app.get('/transmit', (req, res) => { 
-	res.render ('demo', {});
+	res.render ('transmit', {});
 });
 
 app.listen(port, () => console.log (`Example app listening on port ${port}!`));
