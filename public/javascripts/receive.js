@@ -12,6 +12,27 @@ window.onload = function() {
 	audio2 = document.querySelector('#audio2');
 };
 
+var ws = new WebSocket("ws://nikhil.local:3000");
+
+ws.onopen = function() {
+	console.log ('====open======');
+	//ws.send("Message from receiver");
+};
+
+ws.onmessage = function (evt) { 
+	var msg = JSON.parse (evt.data);
+
+	if (msg.type == 'offer')
+		generateAnswer (msg.data);
+
+	if (msg.type == 'candidate')
+		onIceCandidate2 (msg.data);
+};
+
+ws.onclose = function() { 
+	alert("Connection is closed..."); 
+};
+
 function call () {
 	console.log('Starting call');
 
@@ -20,11 +41,12 @@ function call () {
 	pc1 = new RTCPeerConnection(servers);
 	console.log('Created local peer connection object pc1');
 	pc1.onicecandidate = e => onIceCandidate(pc1, e);
+	pc1.ontrack = gotRemoteStream;
 }
 
 window.addCandidates = function (candidate) {
 	onIceCandidate2(candidate);
-	pc1.ontrack = gotRemoteStream;
+	//pc1.ontrack = gotRemoteStream;
 }
 
 window.createAnswer = function (offer) {
@@ -35,9 +57,6 @@ function onCreateSessionDescriptionError(error) {
 	console.log(`Failed to create session description: ${error.toString()}`);
 }
 
-function saveOffer (desc) {
-	}
-
 function generateAnswer(desc) {
 	return pc1.setRemoteDescription(desc).then(() => {
 		pc1.createAnswer().then(gotDescription2, onCreateSessionDescriptionError);
@@ -46,6 +65,12 @@ function generateAnswer(desc) {
 
 function gotDescription2(desc) {
 	console.log(`===================copy this answer=========\n${JSON.stringify (desc)}`);
+	
+	ws.send(JSON.stringify ({
+		type : 'offer',
+		data : desc
+	}));
+
 	pc1.setLocalDescription(desc).then(() => {
 		desc.sdp = forceChosenAudioCodec(desc.sdp);
 	}, onSetSessionDescriptionError);
@@ -65,9 +90,17 @@ function getName(pc) {
 function onIceCandidate(pc, event) {
 	console.log(`===================copy this candidate=========\n${JSON.stringify (event.candidate)}`);
 	console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
+
+	ws.send(JSON.stringify ({
+		type : 'candidate',
+		data : event.candidate
+	}));
 }
 
 function onIceCandidate2(candidate) {
+	if (!candidate)
+		return;
+
 	pc1.addIceCandidate(new RTCIceCandidate (candidate))
 		.then(
 			() => onAddIceCandidateSuccess(),
@@ -171,5 +204,6 @@ function setDefaultCodec(mLine, payload) {
 	}
 	return newLine.join(' ');
 }
+
 
 call ();

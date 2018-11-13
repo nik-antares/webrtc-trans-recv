@@ -12,6 +12,29 @@ window.onload = function() {
 	audio2 = document.querySelector('#audio2');
 };
 
+var ws = new WebSocket("ws://nikhil.local:4000");
+
+ws.onmessage = function (evt) {
+	var msg = JSON.parse (evt.data);
+	console.log ('=======================', msg)
+
+	if (msg.type == 'offer')
+		saveAnswer(msg.data);
+
+	if (msg.type == 'candidate')
+		onIceCandidate2 (msg.data);
+};
+
+ws.onopen = function() {
+	console.log ('====open======');
+//	ws.send('hello');
+};
+
+ws.onclose = function() {
+	alert("Connection is closed...");
+};
+
+
 function gotStream(stream) {
 	console.log('Received local stream');
 	localStream = stream;
@@ -71,6 +94,12 @@ window.addStream = function () {
 function gotDescription1(desc) {
 	console.log(`Offer from pc1\n${desc.sdp}`);
 	console.log(`===================copy this offer=========\n${JSON.stringify (desc)}`);
+
+	ws.send(JSON.stringify ({
+		type : 'offer',
+		data : desc
+	}));
+
 	pc1.setLocalDescription(desc)
 		.then(() => {
 			desc.sdp = forceChosenAudioCodec(desc.sdp);
@@ -91,9 +120,18 @@ function getName(pc) {
 function onIceCandidate(pc, event) {
 	console.log(`===================copy this candidate=========\n${JSON.stringify (event.candidate)}`);
 	console.log(`${getName(pc)} ICE candidate:\n${event.candidate ? event.candidate.candidate : '(null)'}`);
+
+	console.log ('==================', event.candidate)
+	ws.send(JSON.stringify ({
+		type : 'candidate',
+		data : event.candidate
+	}));
 }
 
 function onIceCandidate2(candidate) {
+	if (!candidate)
+		return;
+
 	pc1.addIceCandidate(new RTCIceCandidate (candidate))
 		.then(
 			() => onAddIceCandidateSuccess(),
