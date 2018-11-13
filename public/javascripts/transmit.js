@@ -91,6 +91,7 @@ window.addAnswer = function (answer) {
 window.addStream = function () {
 	console.log('Adding Local Stream to peer connection');
 	localStream.getTracks().forEach(track => pc1.addTrack(track, localStream));
+	audio2.srcObject = localStream;
 }
 
 function gotDescription1(desc) {

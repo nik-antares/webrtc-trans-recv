@@ -81,6 +81,7 @@ function gotDescription2(desc) {
 }
 
 function gotRemoteStream(e) {
+	console.log ('==================================REACHED HERE=======================', e);
 	if (audio2.srcObject !== e.streams[0]) {
 		audio2.srcObject = e.streams[0];
 		console.log('Received remote stream');
