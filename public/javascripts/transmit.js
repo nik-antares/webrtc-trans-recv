@@ -59,11 +59,11 @@ window.addCandidates = function (candidate) {
 	onIceCandidate2(candidate);
 }
 
-window.saveAnswer = function (answer) {
+window.addAnswer = function (answer) {
 	saveAnswer(answer);
 }
 
-window.addTrack = function () {
+window.addStream = function () {
 	console.log('Adding Local Stream to peer connection');
 	localStream.getTracks().forEach(track => pc1.addTrack(track, localStream));
 }
@@ -78,7 +78,7 @@ function gotDescription1(desc) {
 }
 
 function saveAnswer (desc) {
-	console.log(`===================copy this description=========\n${JSON.stringify (desc)}`);
+	console.log('Adding answer to remote description');
 	pc1.setRemoteDescription(desc).then(() => {
 		desc.sdp = forceChosenAudioCodec(desc.sdp);
 	}, onSetSessionDescriptionError);

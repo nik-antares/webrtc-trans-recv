@@ -28,7 +28,7 @@ window.addCandidates = function (candidate) {
 }
 
 window.createAnswer = function (offer) {
-	saveOffer (offer);
+	generateAnswer (offer);
 }
 
 function onCreateSessionDescriptionError(error) {
@@ -36,14 +36,15 @@ function onCreateSessionDescriptionError(error) {
 }
 
 function saveOffer (desc) {
-	pc1.setRemoteDescription(desc).then(() => {
-		desc.sdp = forceChosenAudioCodec(desc.sdp);
-		createAnswer(desc);
+	}
+
+function generateAnswer(desc) {
+	return pc1.setRemoteDescription(desc).then(() => {
+		pc1.createAnswer().then(gotDescription2, onCreateSessionDescriptionError);
 	}, onSetSessionDescriptionError);
 }
 
-function createAnswer(desc) {
-	console.log(`Answer from pc2\n${desc.sdp}`);
+function gotDescription2(desc) {
 	console.log(`===================copy this answer=========\n${JSON.stringify (desc)}`);
 	pc1.setLocalDescription(desc).then(() => {
 		desc.sdp = forceChosenAudioCodec(desc.sdp);
