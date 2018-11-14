@@ -1,2 +1,2 @@
 # webrtc-trans-recv
-Simple audio transmitter and reciever app in Nodejs for testing purposes.
+Simple nodejs app with seperate audio transmitter and reciever pages for testing purposes.
