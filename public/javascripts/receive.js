@@ -68,7 +68,7 @@ function onIceCandidate(pc, event) {
 }
 
 function onIceCandidate2(candidate) {
-	pc1.addIceCandidate(new RTCIceCandidate ({candidate : candidate}))
+	pc1.addIceCandidate(new RTCIceCandidate (candidate))
 		.then(
 			() => onAddIceCandidateSuccess(),
 			err => onAddIceCandidateError(err)
